@@ -1,0 +1,122 @@
+{
+  "entities": {
+    "Player": {
+      "title": "Player",
+      "description": "A player in the current poker game",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "buyIns": { "type": "number" },
+        "totalCashOuts": { "type": "number" },
+        "remainingChips": { "type": "number" },
+        "isSettled": { "type": "boolean" },
+        "isPermanent": { "type": "boolean" }
+      },
+      "required": ["id", "name", "buyIns", "totalCashOuts", "isSettled", "isPermanent"]
+    },
+    "GameSettings": {
+      "title": "GameSettings",
+      "description": "Settings for the current poker game",
+      "type": "object",
+      "properties": {
+        "gameName": { "type": "string" },
+        "chipsPerHand": { "type": "number" },
+        "handValueUSD": { "type": "number" },
+        "usdToCnyRate": { "type": "number" },
+        "exchangeRateMode": { "type": "string", "enum": ["manual", "preset", "realtime"] },
+        "isBuddhaMode": { "type": "boolean" },
+        "buddhaThreshold": { "type": "number" }
+      },
+      "required": ["gameName", "exchangeRateMode", "isBuddhaMode"]
+    },
+    "GameState": {
+      "title": "GameState",
+      "description": "The current state of the active poker game",
+      "type": "object",
+      "properties": {
+        "players": {
+          "type": "array",
+          "items": { "$ref": "Player" }
+        },
+        "settings": { "$ref": "GameSettings" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["players", "settings", "updatedAt"]
+    },
+    "SettlementRecord": {
+      "title": "SettlementRecord",
+      "description": "A historical record of a settled poker game",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "gameName": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "players": {
+          "type": "array",
+          "items": { "$ref": "Player" }
+        },
+        "settings": { "$ref": "GameSettings" },
+        "transfers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from": { "type": "string" },
+              "to": { "type": "string" },
+              "amount": { "type": "number" }
+            }
+          }
+        }
+      },
+      "required": ["id", "gameName", "date", "players", "settings", "transfers"]
+    },
+    "LogEntry": {
+      "title": "LogEntry",
+      "description": "An entry in the game activity log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "playerId": { "type": "string" },
+        "playerName": { "type": "string" },
+        "type": { "type": "string", "enum": ["buy-in", "cash-out", "rejoin", "add-player", "remove-player"] },
+        "amount": { "type": "number" },
+        "prevBuyIns": { "type": "number" },
+        "prevTotalCashOuts": { "type": "number" },
+        "prevIsSettled": { "type": "boolean" }
+      },
+      "required": ["id", "timestamp", "playerId", "playerName", "type"]
+    },
+    "PermanentPlayers": {
+      "title": "PermanentPlayers",
+      "description": "List of permanent players",
+      "type": "object",
+      "properties": {
+        "names": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["names"]
+    }
+  },
+  "firestore": {
+    "/active_game/current": {
+      "schema": "GameState",
+      "description": "The current active game state"
+    },
+    "/history/{recordId}": {
+      "schema": "SettlementRecord",
+      "description": "Historical settlement records"
+    },
+    "/logs/{logId}": {
+      "schema": "LogEntry",
+      "description": "Activity logs for the current game"
+    },
+    "/config/permanent_players": {
+      "schema": "PermanentPlayers",
+      "description": "Shared list of permanent players"
+    }
+  }
+}

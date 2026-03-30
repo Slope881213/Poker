@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: active_game
+    // Document ID: current
+    // Fields:
+    //   - players: list of Player objects
+    //   - settings: GameSettings object
+    //   - updatedAt: timestamp
+    //
+    // Collection: history
+    // Document ID: recordId (string)
+    // Fields:
+    //   - id: string
+    //   - gameName: string
+    //   - date: string (ISO)
+    //   - players: list of Player objects
+    //   - settings: GameSettings object
+    //   - transfers: list of Transfer objects
+    //
+    // Collection: logs
+    // Document ID: logId (string)
+    // Fields:
+    //   - id: string
+    //   - timestamp: number
+    //   - playerId: string
+    //   - playerName: string
+    //   - type: string
+    //   - amount: number (optional)
+    //   - prevBuyIns: number (optional)
+    //   - prevTotalCashOuts: number (optional)
+    //   - prevIsSettled: boolean (optional)
+    //
+    // Collection: config
+    // Document ID: permanent_players
+    // Fields:
+    //   - names: list of strings
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "laiph303132@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidPlayer(p) {
+      return p is map &&
+             p.id is string &&
+             p.name is string && p.name.size() > 0 && p.name.size() < 50 &&
+             p.buyIns is number &&
+             p.totalCashOuts is number &&
+             p.isSettled is bool &&
+             p.isPermanent is bool &&
+             (p.remainingChips == null || p.remainingChips is number);
+    }
+
+    function isValidSettings(s) {
+      return s is map &&
+             s.gameName is string &&
+             (s.chipsPerHand == null || s.chipsPerHand is number) &&
+             (s.handValueUSD == null || s.handValueUSD is number) &&
+             (s.usdToCnyRate == null || s.usdToCnyRate is number) &&
+             s.exchangeRateMode in ['manual', 'preset', 'realtime'] &&
+             s.isBuddhaMode is bool &&
+             (s.buddhaThreshold == null || s.buddhaThreshold is number);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /active_game/current {
+      allow read, write: if true;
+    }
+
+    match /history/{recordId} {
+      allow read, create: if true;
+      allow delete: if true; // Since there's no login, we allow delete for now, or could restrict if needed
+    }
+
+    match /logs/{logId} {
+      allow read, create: if true;
+      allow delete: if true;
+    }
+
+    match /config/permanent_players {
+      allow read, write: if true;
+    }
+
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+  }
+}
